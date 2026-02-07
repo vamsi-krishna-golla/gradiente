@@ -1,0 +1,35 @@
+name: Gradual Degradation
+description: One node slowly degrades and recovers.
+nodes:
+  - id: node-1
+    gradient_agent_url: http://localhost:8081
+    base_latency_ms: 10
+    max_connections: 100
+  - id: node-2
+    gradient_agent_url: http://localhost:8082
+  - id: node-3
+    gradient_agent_url: http://localhost:8083
+traffic:
+  requests_per_second: 50
+  duration_seconds: 60
+events:
+  - at_second: 10
+    type: degrade
+    node: node-1
+    factor: 1.5
+  - at_second: 20
+    type: increase_error_rate
+    node: node-1
+    rate: 0.1
+  - at_second: 35
+    type: degrade
+    node: node-1
+    factor: 3.0
+  - at_second: 45
+    type: recover
+    node: node-1
+expected_results:
+  gradient:
+    - preemptive shift
+  traditional:
+    - delayed reaction

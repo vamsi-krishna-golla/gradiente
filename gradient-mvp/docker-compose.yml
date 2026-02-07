@@ -1,0 +1,26 @@
+version: '3.8'
+services:
+  gradient-agent-1:
+    build: { context: ./agent }
+    environment:
+      - NODE_ID=node-1
+      - GOSSIP_PORT=7946
+      - HTTP_PORT=8081
+      - PEERS=gradient-agent-2:7946,gradient-agent-3:7946
+    ports: ["8081:8081"]
+  gradient-agent-2:
+    build: { context: ./agent }
+    environment: ["NODE_ID=node-2", "GOSSIP_PORT=7946", "HTTP_PORT=8082", "PEERS=gradient-agent-1:7946,gradient-agent-3:7946"]
+    ports: ["8082:8082"]
+  gradient-agent-3:
+    build: { context: ./agent }
+    environment: ["NODE_ID=node-3", "GOSSIP_PORT=7946", "HTTP_PORT=8083", "PEERS=gradient-agent-1:7946,gradient-agent-2:7946"]
+    ports: ["8083:8083"]
+  simulator:
+    build: { context: ./simulator }
+    command: python simulator.py scenarios/gradual_degradation.yaml
+    ports: ["9090:9090"]
+  dashboard:
+    build: { context: ./dashboard }
+    environment: ["VITE_WS_URL=ws://localhost:8081/ws"]
+    ports: ["3000:3000"]

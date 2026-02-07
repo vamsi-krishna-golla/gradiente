@@ -1,0 +1,24 @@
+name: Cascade Failure
+description: One node fails under high traffic.
+nodes:
+  - id: node-1
+    gradient_agent_url: http://localhost:8081
+    max_connections: 50
+  - id: node-2
+    gradient_agent_url: http://localhost:8082
+    max_connections: 50
+  - id: node-3
+    gradient_agent_url: http://localhost:8083
+    max_connections: 50
+traffic:
+  requests_per_second: 80
+  duration_seconds: 50
+events:
+  - at_second: 15
+    type: fail
+    node: node-1
+expected_results:
+  gradient:
+    - no secondary failures
+  traditional:
+    - overload risk
