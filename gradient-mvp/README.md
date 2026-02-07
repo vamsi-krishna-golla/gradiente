@@ -3,8 +3,8 @@
 Proof-of-concept morphogenic coordination system showing how scalar field propagation enables preemptive load balancing and cascade prevention.
 
 ## Components
-- **agent/**: Go gradient agent emitting health/load/capacity fields, gossip propagation over UDP, routing API, metrics, and websocket stream.
-- **simulator/**: Python traffic/failure simulator that compares gradient routing vs traditional circuit-breaker routing.
+- **agent/**: Go gradient agent emitting health/load/capacity fields, UDP gossip propagation, routing API, metrics, and a JSON stream endpoint.
+- **simulator/**: Python traffic/failure simulator that compares gradient routing vs traditional threshold/circuit-breaker behavior.
 - **dashboard/**: React + D3 topology and metrics dashboard.
 - **comparison/**: baseline traditional LB helpers for benchmark narratives.
 
@@ -12,8 +12,44 @@ Proof-of-concept morphogenic coordination system showing how scalar field propag
 ```bash
 make build
 make test
+```
+
+## How to test this app (recommended)
+### 1) Fast local smoke test (no Docker)
+This compiles the Go agent, starts 3 local nodes, calls API endpoints, and runs a short simulator scenario.
+
+```bash
+make smoke
+```
+
+### 2) Run agent tests + simulator syntax checks
+```bash
+make test
+```
+
+### 3) Manual API validation
+Start one agent:
+```bash
+cd agent
+NODE_ID=node-1 HTTP_PORT=8081 GOSSIP_PORT=7946 go run ./cmd/gradient-agent
+```
+
+In another terminal:
+```bash
+curl http://localhost:8081/fields
+curl "http://localhost:8081/route?candidates=node-1,node-2,node-3"
+curl http://localhost:8081/metrics
+curl http://localhost:8081/stream
+```
+
+### 4) Full stack with Docker
+```bash
 make run
 ```
+
+Then open:
+- Dashboard: `http://localhost:3000`
+- Simulator metrics: `http://localhost:9090`
 
 ## API
 - `GET /fields`
@@ -21,4 +57,8 @@ make run
 - `GET /route?candidates=node1,node2,node3`
 - `POST /config`
 - `GET /metrics`
-- `GET /ws`
+- `GET /stream`
+
+## Notes
+- Dashboard prefers WebSocket URL style configuration; in this MVP, it falls back to polling `/stream` when WS is unavailable.
+- If `npm install` is blocked by your environment/network policy, you can still validate agent and simulator behavior via `make smoke` and `make test`.
