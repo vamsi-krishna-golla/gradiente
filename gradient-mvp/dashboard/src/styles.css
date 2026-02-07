@@ -1,0 +1,4 @@
+body { margin: 0; font-family: Arial, sans-serif; }
+.app { padding: 16px; }
+main { display: flex; gap: 16px; }
+aside { min-width: 300px; }

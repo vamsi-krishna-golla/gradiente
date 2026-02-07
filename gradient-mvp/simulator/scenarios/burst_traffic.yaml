@@ -1,0 +1,17 @@
+name: Burst Traffic
+description: sudden request spike
+nodes:
+  - id: node-1
+    gradient_agent_url: http://localhost:8081
+  - id: node-2
+    gradient_agent_url: http://localhost:8082
+  - id: node-3
+    gradient_agent_url: http://localhost:8083
+traffic:
+  requests_per_second: 150
+  duration_seconds: 30
+events:
+  - at_second: 5
+    type: degrade
+    node: node-2
+    factor: 2.0
