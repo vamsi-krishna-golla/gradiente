@@ -29,6 +29,9 @@ func NewEmitter(nodeID string, metrics MetricSource, cfg EmitterConfig) *Emitter
 }
 
 func (e *Emitter) EmitHealthField() float64 {
+	if e.metrics == nil {
+		return 0
+	}
 	errorRate := e.metrics.GetErrorRate(time.Minute)
 	latencyP99 := e.metrics.GetLatencyP99(time.Minute)
 	errorComponent := 1.0 - math.Min(errorRate/0.1, 1.0)
@@ -37,6 +40,9 @@ func (e *Emitter) EmitHealthField() float64 {
 }
 
 func (e *Emitter) EmitLoadField() float64 {
+	if e.metrics == nil {
+		return 0
+	}
 	cpuUtil := e.metrics.GetCPUUtilization()
 	memUtil := e.metrics.GetMemoryUtilization()
 	activeConns := e.metrics.GetActiveConnections()

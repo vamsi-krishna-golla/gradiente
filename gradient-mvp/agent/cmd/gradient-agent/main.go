@@ -22,9 +22,8 @@ func main() {
 	peers := strings.Split(env("PEERS", ""), ",")
 
 	metrics.Register()
-	m := metrics.NewLocalMetrics()
 	store := fields.NewStateStore(nodeID)
-	emitter := fields.NewEmitter(nodeID, m, fields.EmitterConfig{MaxConnections: 100})
+	emitter := fields.NewEmitter(nodeID, nil, fields.EmitterConfig{MaxConnections: 100})
 	router := decision.NewRouter(store)
 	protocol, err := gossip.NewProtocol(gossip.Config{NodeID: nodeID, Peers: peers, BindAddr: bind, MaxHops: 3, DecayRate: 1.0}, emitter, store)
 	if err != nil {
