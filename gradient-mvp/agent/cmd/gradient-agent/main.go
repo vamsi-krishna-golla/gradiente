@@ -34,17 +34,19 @@ func main() {
 	defer cancel()
 	go protocol.PropagateFields(ctx)
 
-	http.HandleFunc("/fields", func(w http.ResponseWriter, r *http.Request) { _ = json.NewEncoder(w).Encode(store.Snapshot()) })
-	http.HandleFunc("/fields/", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/fields", withCORS(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewEncoder(w).Encode(store.Snapshot())
+	}))
+	http.HandleFunc("/fields/", withCORS(func(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(store.GetFieldsFor(strings.TrimPrefix(r.URL.Path, "/fields/")))
-	})
-	http.HandleFunc("/route", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	http.HandleFunc("/route", withCORS(func(w http.ResponseWriter, r *http.Request) {
 		candidates := strings.Split(r.URL.Query().Get("candidates"), ",")
 		selected := router.SelectNode(candidates)
 		metrics.RoutingDecisionCounter.Inc(selected, "field_score")
 		_ = json.NewEncoder(w).Encode(map[string]string{"selected_node": selected})
-	})
-	http.HandleFunc("/config", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	http.HandleFunc("/config", withCORS(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			return
@@ -56,22 +58,37 @@ func main() {
 		}
 		router.UpdateConfig(cfg)
 		_ = json.NewEncoder(w).Encode(cfg)
-	})
-	http.HandleFunc("/metrics", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	http.HandleFunc("/metrics", withCORS(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
 		_, _ = w.Write([]byte(metrics.RoutingDecisionCounter.Dump()))
-	})
-	http.HandleFunc("/stream", func(w http.ResponseWriter, r *http.Request) {
+	}))
+	http.HandleFunc("/stream", withCORS(func(w http.ResponseWriter, r *http.Request) {
 		snap := store.Snapshot()
 		nodes := make([]map[string]any, 0, len(snap))
 		for _, n := range snap {
 			nodes = append(nodes, map[string]any{"id": n.NodeID, "x": 150 + len(nodes)*220, "y": 220, "health": n.Health, "load": n.Load, "capacity": n.Capacity, "requestsPerSecond": 80.0, "errorRate": 1 - n.Health, "latencyP99": 1000 * (1 - n.Health)})
 		}
 		_ = json.NewEncoder(w).Encode(map[string]any{"type": "field_update", "nodes": nodes, "fields": map[string]map[string]float64{}})
-	})
+	}))
 
 	log.Printf("gradient-agent %s listening on :%s", nodeID, httpPort)
 	log.Fatal(http.ListenAndServe(":"+httpPort, nil))
+}
+
+func withCORS(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next(w, r)
+	}
 }
 
 func env(k, d string) string {
