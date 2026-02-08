@@ -39,7 +39,6 @@ type LocalMetrics struct {
 
 func NewLocalMetrics() *LocalMetrics {
 	m := &LocalMetrics{errorRate: 0.01, latencyP99: 20, cpu: 0.3, mem: 0.35, conns: 20}
-	go m.jitterLoop()
 	return m
 }
 func (m *LocalMetrics) jitterLoop() {

@@ -14,6 +14,13 @@ import (
 	"gradient-mvp/agent/pkg/metrics"
 )
 
+type authoritativeStateUpdate struct {
+	NodeID   string  `json:"node_id"`
+	Health   float64 `json:"health"`
+	Load     float64 `json:"load"`
+	Capacity float64 `json:"capacity"`
+}
+
 func main() {
 	nodeID := env("NODE_ID", "node-1")
 	httpPort := env("HTTP_PORT", "8081")
@@ -22,9 +29,8 @@ func main() {
 	peers := strings.Split(env("PEERS", ""), ",")
 
 	metrics.Register()
-	m := metrics.NewLocalMetrics()
 	store := fields.NewStateStore(nodeID)
-	emitter := fields.NewEmitter(nodeID, m, fields.EmitterConfig{MaxConnections: 100})
+	emitter := fields.NewEmitter(nodeID, nil, fields.EmitterConfig{MaxConnections: 100})
 	router := decision.NewRouter(store)
 	protocol, err := gossip.NewProtocol(gossip.Config{NodeID: nodeID, Peers: peers, BindAddr: bind, MaxHops: 3, DecayRate: 1.0}, emitter, store)
 	if err != nil {
@@ -39,6 +45,21 @@ func main() {
 	}))
 	http.HandleFunc("/fields/", withCORS(func(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(store.GetFieldsFor(strings.TrimPrefix(r.URL.Path, "/fields/")))
+	}))
+	http.HandleFunc("/state", withCORS(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		var state authoritativeStateUpdate
+		if err := json.NewDecoder(r.Body).Decode(&state); err != nil || state.NodeID == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		store.UpdateContribution(state.NodeID, string(fields.HealthField), state.Health)
+		store.UpdateContribution(state.NodeID, string(fields.LoadField), state.Load)
+		store.UpdateContribution(state.NodeID, string(fields.CapacityField), state.Capacity)
+		w.WriteHeader(http.StatusNoContent)
 	}))
 	http.HandleFunc("/route", withCORS(func(w http.ResponseWriter, r *http.Request) {
 		candidates := strings.Split(r.URL.Query().Get("candidates"), ",")
