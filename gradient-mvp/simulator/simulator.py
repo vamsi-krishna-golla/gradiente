@@ -51,8 +51,34 @@ class Simulator:
             self.nodes[node.node_id] = node
             self.gradient_agents[node.node_id] = node_config["gradient_agent_url"]
 
+    def compute_authoritative_state(self, node: NodeState) -> dict:
+        effective_error_rate = min(node.error_rate * node.degradation_factor, 0.95)
+        latency_p99 = node.base_latency_ms * node.degradation_factor
+        error_component = 1.0 - min(effective_error_rate / 0.1, 1.0)
+        latency_component = 1.0 - min(latency_p99 / 1000.0, 1.0)
+        health = max(0.0, min(1.0, 0.6 * error_component + 0.4 * latency_component))
+        load_factor = node.active_connections / max(1, node.max_connections)
+        load = max(0.0, min(1.0, 0.5 * min(node.cpu_utilization * node.degradation_factor, 1.0) + 0.5 * min(load_factor, 1.0)))
+        return {"node_id": node.node_id, "health": health, "load": load, "capacity": max(0.0, min(1.0, 1.0 - load))}
+
+    async def publish_state_to_agents(self):
+        states = [self.compute_authoritative_state(node) for node in self.nodes.values()]
+        agent_urls = sorted(set(self.gradient_agents.values()))
+        timeout = aiohttp.ClientTimeout(total=1)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            tasks = [
+                session.post(f"{agent_url}/state", json=state)
+                for agent_url in agent_urls
+                for state in states
+            ]
+            responses = await asyncio.gather(*tasks, return_exceptions=True)
+            for resp in responses:
+                if isinstance(resp, aiohttp.ClientResponse):
+                    await resp.release()
+
     async def run_scenario(self):
         print(f"Running scenario: {self.config['name']}")
+        await self.publish_state_to_agents()
         traffic = self.config["traffic"]
         traffic_task = asyncio.create_task(self.generate_traffic(traffic["requests_per_second"], traffic["duration_seconds"]))
         start = time.time()
@@ -74,6 +100,7 @@ class Simulator:
             node.error_rate = 0.99
         elif t == "increase_error_rate":
             node.error_rate = event["rate"]
+        await self.publish_state_to_agents()
         print("[EVENT]", event)
 
     async def generate_traffic(self, rps: int, duration_s: int):
@@ -82,6 +109,7 @@ class Simulator:
         while time.time() < end:
             asyncio.create_task(self.send_request_gradient())
             asyncio.create_task(self.send_request_traditional())
+            await self.publish_state_to_agents()
             await asyncio.sleep(interval)
 
     async def send_request_gradient(self):

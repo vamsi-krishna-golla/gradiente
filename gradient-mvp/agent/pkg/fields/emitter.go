@@ -54,6 +54,9 @@ func (e *Emitter) EmitCapacityField() float64 { return clamp01(1.0 - e.EmitLoadF
 
 func (e *Emitter) EmitAll() map[string]FieldValue {
 	now := time.Now()
+	if e.metrics == nil {
+		return map[string]FieldValue{}
+	}
 	return map[string]FieldValue{
 		string(HealthField):   {Type: HealthField, Source: e.nodeID, Intensity: e.EmitHealthField(), Timestamp: now},
 		string(LoadField):     {Type: LoadField, Source: e.nodeID, Intensity: e.EmitLoadField(), Timestamp: now},
