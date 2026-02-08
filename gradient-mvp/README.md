@@ -59,6 +59,14 @@ Then open:
 - `GET /metrics`
 - `GET /stream`
 
+## Dashboard transport (local)
+The dashboard uses HTTP polling against the agent `GET /stream` endpoint by default.
+
+- Default API base URL: `http://localhost:8081` (set via `VITE_API_BASE_URL`).
+- WebSocket is **disabled by default** and should only be enabled when a compatible `/ws` endpoint exists.
+- Optional WebSocket settings:
+  - `VITE_ENABLE_WS=true`
+  - `VITE_WS_URL=ws://localhost:8081/ws`
+
 ## Notes
-- Dashboard prefers WebSocket URL style configuration; in this MVP, it falls back to polling `/stream` when WS is unavailable.
 - If `npm install` is blocked by your environment/network policy, you can still validate agent and simulator behavior via `make smoke` and `make test`.

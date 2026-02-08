@@ -2,7 +2,13 @@ import { useEffect, useState } from 'react';
 
 type Node = { id: string; x: number; y: number; health: number; load: number; capacity: number; requestsPerSecond: number; errorRate: number; latencyP99: number };
 
-export function useFieldStream(wsUrl: string) {
+type FieldStreamConfig = {
+  streamUrl: string;
+  wsUrl?: string;
+  enableWebSocket?: boolean;
+};
+
+export function useFieldStream({ streamUrl, wsUrl, enableWebSocket = false }: FieldStreamConfig) {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [fields, setFields] = useState<Map<string, Map<string, number>>>(new Map());
   const [isConnected, setIsConnected] = useState(false);
@@ -16,25 +22,27 @@ export function useFieldStream(wsUrl: string) {
       const f = new Map<string, Map<string, number>>();
       Object.entries(data.fields || {}).forEach(([source, targets]) => f.set(source, new Map(Object.entries(targets as Record<string, number>))));
       setFields(f);
+      setIsConnected(true);
     };
 
-    try {
-      ws = new WebSocket(wsUrl);
-      ws.onopen = () => setIsConnected(true);
-      ws.onclose = () => setIsConnected(false);
-      ws.onmessage = (event) => applyData(JSON.parse(event.data));
-    } catch {
-      setIsConnected(false);
+    if (enableWebSocket && wsUrl) {
+      try {
+        ws = new WebSocket(wsUrl);
+        ws.onopen = () => setIsConnected(true);
+        ws.onerror = () => setIsConnected(false);
+        ws.onclose = () => setIsConnected(false);
+        ws.onmessage = (event) => applyData(JSON.parse(event.data));
+      } catch {
+        setIsConnected(false);
+      }
     }
 
-    const streamUrl = wsUrl.replace('ws://', 'http://').replace('/ws', '/stream');
     poller = window.setInterval(async () => {
-      if (isConnected) return;
       try {
         const resp = await fetch(streamUrl);
         applyData(await resp.json());
       } catch {
-        // noop
+        setIsConnected(false);
       }
     }, 1000);
 
@@ -42,7 +50,7 @@ export function useFieldStream(wsUrl: string) {
       if (ws) ws.close();
       if (poller) clearInterval(poller);
     };
-  }, [wsUrl, isConnected]);
+  }, [streamUrl, wsUrl, enableWebSocket]);
 
   return { nodes, fields, isConnected };
 }

@@ -4,7 +4,14 @@ import { MetricsPanel } from './components/MetricsPanel';
 import { useFieldStream } from './hooks/useFieldStream';
 
 function App() {
-  const { nodes, fields, isConnected } = useFieldStream(import.meta.env.VITE_WS_URL || 'ws://localhost:8081/ws');
+  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081';
+  const wsUrl = import.meta.env.VITE_WS_URL;
+  const enableWebSocket = import.meta.env.VITE_ENABLE_WS === 'true';
+  const { nodes, fields, isConnected } = useFieldStream({
+    streamUrl: `${apiBaseUrl}/stream`,
+    wsUrl,
+    enableWebSocket,
+  });
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   return (
     <div className="app">
