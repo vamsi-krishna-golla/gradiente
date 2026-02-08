@@ -11,8 +11,10 @@ export function useFieldStream(wsUrl: string) {
     let ws: WebSocket | null = null;
     let poller: number | undefined;
     const applyData = (data: any) => {
-      if (data.type !== 'field_update') return;
-      setNodes(data.nodes || []);
+      if (data?.type && data.type !== 'field_update') return;
+      if (!Array.isArray(data?.nodes)) return;
+
+      setNodes(data.nodes);
       const f = new Map<string, Map<string, number>>();
       Object.entries(data.fields || {}).forEach(([source, targets]) => f.set(source, new Map(Object.entries(targets as Record<string, number>))));
       setFields(f);
