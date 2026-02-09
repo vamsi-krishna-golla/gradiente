@@ -54,6 +54,37 @@ function createSimulatorSnapshot(tick: number) {
   return { nodes, fields };
 }
 
+function normalizeNodes(data: any): Node[] {
+  if (Array.isArray(data?.nodes)) {
+    return data.nodes;
+  }
+
+  if (data && typeof data === 'object' && !Array.isArray(data)) {
+    const entries = Object.entries(data as Record<string, any>);
+    if (entries.length && entries.every(([, value]) => value && typeof value === 'object' && 'health' in value)) {
+      return entries.map(([id, value], index) => ({
+        id,
+        x: 150 + index * 220,
+        y: 220,
+        health: Number(value.health ?? 0),
+        load: Number(value.load ?? 0),
+        capacity: Number(value.capacity ?? 0),
+        requestsPerSecond: Number(value.requestsPerSecond ?? 80),
+        errorRate: Number(value.errorRate ?? Math.max(0, 1 - Number(value.health ?? 0))),
+        latencyP99: Number(value.latencyP99 ?? 1000 * Math.max(0, 1 - Number(value.health ?? 0))),
+      }));
+    }
+  }
+
+  return [];
+}
+
+function normalizeFields(data: any) {
+  const out = new Map<string, Map<string, number>>();
+  Object.entries(data?.fields || {}).forEach(([source, targets]) => out.set(source, new Map(Object.entries(targets as Record<string, number>))));
+  return out;
+}
+
 export function useFieldStream({ streamUrl, wsUrl, enableWebSocket = false, useSimulatorData = false }: FieldStreamConfig) {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [fields, setFields] = useState<Map<string, Map<string, number>>>(new Map());
@@ -80,12 +111,14 @@ export function useFieldStream({ streamUrl, wsUrl, enableWebSocket = false, useS
     let poller: number | undefined;
     const applyData = (data: any) => {
       if (data?.type && data.type !== 'field_update') return;
-      if (!Array.isArray(data?.nodes)) return;
+      const normalizedNodes = normalizeNodes(data);
+      if (normalizedNodes.length === 0) {
+        setIsConnected(false);
+        return;
+      }
 
-      setNodes(data.nodes);
-      const f = new Map<string, Map<string, number>>();
-      Object.entries(data.fields || {}).forEach(([source, targets]) => f.set(source, new Map(Object.entries(targets as Record<string, number>))));
-      setFields(f);
+      setNodes(normalizedNodes);
+      setFields(normalizeFields(data));
       setIsConnected(true);
     };
 
@@ -101,14 +134,28 @@ export function useFieldStream({ streamUrl, wsUrl, enableWebSocket = false, useS
       }
     }
 
-    poller = window.setInterval(async () => {
+    const poll = async () => {
       try {
-        const resp = await fetch(streamUrl);
-        applyData(await resp.json());
+        const streamResp = await fetch(streamUrl);
+        if (streamResp.ok) {
+          applyData(await streamResp.json());
+          return;
+        }
+
+        const fieldsUrl = streamUrl.replace(/\/stream$/, '/fields');
+        const fallbackResp = await fetch(fieldsUrl);
+        if (!fallbackResp.ok) {
+          setIsConnected(false);
+          return;
+        }
+        applyData(await fallbackResp.json());
       } catch {
         setIsConnected(false);
       }
-    }, 1000);
+    };
+
+    poll();
+    poller = window.setInterval(poll, 1000);
 
     return () => {
       if (ws) ws.close();
