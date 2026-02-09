@@ -71,29 +71,26 @@ The dashboard uses HTTP polling against the agent `GET /stream` endpoint by defa
 ## Notes
 - If `npm install` is blocked by your environment/network policy, you can still validate agent and simulator behavior via `make smoke` and `make test`.
 
-## Cloudflare Pages deploy (with simulator data)
+## Vercel deploy (with simulator data)
 Use this path when you want fast user feedback without running backend services.
 
-1) Build and deploy dashboard in simulator mode:
+1) Deploy dashboard in simulator mode:
 ```bash
 cd dashboard
 npm install
-npm install -g wrangler
-wrangler login
-npm run cf:deploy:sim
+npm install -g vercel
+vercel login
+npm run vercel:deploy:sim
 ```
-
-If this is your first deploy, ensure `dashboard/wrangler.toml` has a unique `name` for your Cloudflare project before running the deploy command.
 
 2) For repeat deploys:
 ```bash
-npm run cf:deploy:sim
+npm run vercel:deploy:sim
 ```
 
 3) Optional: deploy with live API instead of simulator mode:
 ```bash
-VITE_API_BASE_URL=https://your-agent-api.example.com npm run build
-npm run cf:deploy
+VITE_API_BASE_URL=https://your-agent-api.example.com npm run vercel:deploy
 ```
 
 Simulator mode is controlled by `VITE_USE_SIMULATOR_DATA=true` and renders animated, synthetic node/field metrics suitable for early feedback sessions.
