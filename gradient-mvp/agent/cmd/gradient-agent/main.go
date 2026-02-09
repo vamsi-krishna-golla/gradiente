@@ -30,6 +30,9 @@ func main() {
 
 	metrics.Register()
 	store := fields.NewStateStore(nodeID)
+	store.UpdateContribution(nodeID, string(fields.HealthField), 0.95)
+	store.UpdateContribution(nodeID, string(fields.LoadField), 0.35)
+	store.UpdateContribution(nodeID, string(fields.CapacityField), 0.85)
 	emitter := fields.NewEmitter(nodeID, nil, fields.EmitterConfig{MaxConnections: 100})
 	router := decision.NewRouter(store)
 	protocol, err := gossip.NewProtocol(gossip.Config{NodeID: nodeID, Peers: peers, BindAddr: bind, MaxHops: 3, DecayRate: 1.0}, emitter, store)

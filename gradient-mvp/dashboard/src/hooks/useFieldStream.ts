@@ -101,14 +101,21 @@ export function useFieldStream({ streamUrl, wsUrl, enableWebSocket = false, useS
       }
     }
 
-    poller = window.setInterval(async () => {
+    const poll = async () => {
       try {
         const resp = await fetch(streamUrl);
+        if (!resp.ok) {
+          setIsConnected(false);
+          return;
+        }
         applyData(await resp.json());
       } catch {
         setIsConnected(false);
       }
-    }, 1000);
+    };
+
+    poll();
+    poller = window.setInterval(poll, 1000);
 
     return () => {
       if (ws) ws.close();
