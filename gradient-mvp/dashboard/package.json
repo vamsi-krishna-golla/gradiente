@@ -6,8 +6,8 @@
     "start": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "cf:deploy": "wrangler pages deploy",
-    "cf:deploy:sim": "VITE_USE_SIMULATOR_DATA=true vite build && wrangler pages deploy"
+    "vercel:deploy": "vercel --prod",
+    "vercel:deploy:sim": "VITE_USE_SIMULATOR_DATA=true vercel --prod"
   },
   "dependencies": {
     "d3": "^7.9.0",
