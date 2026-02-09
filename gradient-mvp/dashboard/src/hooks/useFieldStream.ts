@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
+import { getNodeState, type NodeState } from '../utils/nodeState';
 
-type Node = { id: string; x: number; y: number; health: number; load: number; capacity: number; requestsPerSecond: number; errorRate: number; latencyP99: number };
+type Node = { id: string; x: number; y: number; health: number; load: number; capacity: number; requestsPerSecond: number; errorRate: number; latencyP99: number; state: NodeState };
 
 type FieldStreamConfig = {
   streamUrl: string;
@@ -14,12 +15,13 @@ const SIMULATOR_NODE_IDS = ['edge-a', 'edge-b', 'edge-c', 'edge-d'];
 function createSimulatorSnapshot(tick: number) {
   const nodes = SIMULATOR_NODE_IDS.map((id, index) => {
     const phase = tick / 5 + index;
-    const health = Math.max(0.65, Math.min(1, 0.88 + Math.sin(phase) * 0.1));
-    const load = Math.max(0.1, Math.min(0.95, 0.45 + Math.cos(phase * 1.15) * 0.28));
-    const capacity = Math.max(load + 0.05, Math.min(1, 0.8 + Math.sin(phase * 0.75) * 0.12));
+    const health = Math.max(0.3, Math.min(1, 0.78 + Math.sin(phase) * 0.35));
+    const load = Math.max(0.15, Math.min(0.98, 0.52 + Math.cos(phase * 1.15) * 0.4));
+    const capacity = Math.max(load + 0.05, Math.min(1, 0.82 + Math.sin(phase * 0.75) * 0.12));
     const requestsPerSecond = 120 + Math.round(load * 220);
-    const errorRate = Math.max(0.002, (1 - health) * 0.08);
-    const latencyP99 = 90 + Math.round(load * 220 + errorRate * 900);
+    const errorRate = Math.max(0.002, (1 - health) * 0.14 + Math.max(0, load - 0.7) * 0.12);
+    const latencyP99 = 90 + Math.round(load * 240 + errorRate * 1000);
+    const state = getNodeState({ health, load, errorRate });
 
     return {
       id,
@@ -31,6 +33,7 @@ function createSimulatorSnapshot(tick: number) {
       requestsPerSecond,
       errorRate,
       latencyP99,
+      state,
     };
   });
 
@@ -56,7 +59,14 @@ function createSimulatorSnapshot(tick: number) {
 
 function normalizeNodes(data: any): Node[] {
   if (Array.isArray(data?.nodes)) {
-    return data.nodes;
+    return data.nodes.map((node: any) => ({
+      ...node,
+      state: node.state ?? getNodeState({
+        health: Number(node.health ?? 0),
+        load: Number(node.load ?? 0),
+        errorRate: Number(node.errorRate ?? Math.max(0, 1 - Number(node.health ?? 0))),
+      }),
+    }));
   }
 
   if (data && typeof data === 'object' && !Array.isArray(data)) {
@@ -72,6 +82,11 @@ function normalizeNodes(data: any): Node[] {
         requestsPerSecond: Number(value.requestsPerSecond ?? 80),
         errorRate: Number(value.errorRate ?? Math.max(0, 1 - Number(value.health ?? 0))),
         latencyP99: Number(value.latencyP99 ?? 1000 * Math.max(0, 1 - Number(value.health ?? 0))),
+        state: getNodeState({
+          health: Number(value.health ?? 0),
+          load: Number(value.load ?? 0),
+          errorRate: Number(value.errorRate ?? Math.max(0, 1 - Number(value.health ?? 0))),
+        }),
       }));
     }
   }
