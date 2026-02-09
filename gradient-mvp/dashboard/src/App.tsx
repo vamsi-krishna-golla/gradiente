@@ -7,7 +7,7 @@ function App() {
   const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081';
   const wsUrl = import.meta.env.VITE_WS_URL;
   const enableWebSocket = import.meta.env.VITE_ENABLE_WS === 'true';
-  const useSimulatorData = import.meta.env.VITE_USE_SIMULATOR_DATA === 'true';
+  const useSimulatorData = import.meta.env.VITE_USE_SIMULATOR_DATA === 'true' || (import.meta.env.PROD && !import.meta.env.VITE_API_BASE_URL);
   const { nodes, fields, isConnected } = useFieldStream({
     streamUrl: `${apiBaseUrl}/stream`,
     wsUrl,

@@ -62,6 +62,8 @@ Then open:
 ## Dashboard transport (local)
 The dashboard uses HTTP polling against the agent `GET /stream` endpoint by default.
 
+In production builds, if `VITE_API_BASE_URL` is not set, the dashboard now auto-falls back to simulator data so the UI is never empty.
+
 - Default API base URL: `http://localhost:8081` (set via `VITE_API_BASE_URL`).
 - WebSocket is **disabled by default** and should only be enabled when a compatible `/ws` endpoint exists.
 - Optional WebSocket settings:
@@ -94,3 +96,7 @@ VITE_API_BASE_URL=https://your-agent-api.example.com npm run vercel:deploy
 ```
 
 Simulator mode is controlled by `VITE_USE_SIMULATOR_DATA=true` and renders animated, synthetic node/field metrics suitable for early feedback sessions.
+
+
+### Vercel branch deploy policy
+`dashboard/vercel.json` is configured to only allow `main` branch deployments and skip builds from any other branch.
