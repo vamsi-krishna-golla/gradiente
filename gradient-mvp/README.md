@@ -78,9 +78,12 @@ Use this path when you want fast user feedback without running backend services.
 ```bash
 cd dashboard
 npm install
-npx wrangler login
+npm install -g wrangler
+wrangler login
 npm run cf:deploy:sim
 ```
+
+If this is your first deploy, ensure `dashboard/wrangler.toml` has a unique `name` for your Cloudflare project before running the deploy command.
 
 2) For repeat deploys:
 ```bash

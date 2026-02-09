@@ -6,8 +6,8 @@
     "start": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "cf:deploy": "npx wrangler pages deploy dist",
-    "cf:deploy:sim": "VITE_USE_SIMULATOR_DATA=true vite build && npx wrangler pages deploy dist"
+    "cf:deploy": "wrangler pages deploy",
+    "cf:deploy:sim": "VITE_USE_SIMULATOR_DATA=true vite build && wrangler pages deploy"
   },
   "dependencies": {
     "d3": "^7.9.0",
