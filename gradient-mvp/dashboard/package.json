@@ -4,7 +4,10 @@
   "private": true,
   "scripts": {
     "start": "vite",
-    "build": "vite build"
+    "build": "vite build",
+    "preview": "vite preview",
+    "cf:deploy": "npx wrangler pages deploy dist",
+    "cf:deploy:sim": "VITE_USE_SIMULATOR_DATA=true vite build && npx wrangler pages deploy dist"
   },
   "dependencies": {
     "d3": "^7.9.0",
